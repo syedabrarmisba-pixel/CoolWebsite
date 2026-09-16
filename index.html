@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AbrarAI — Command Center</title>
+
+    <link rel="stylesheet" href="/style.css">
+
+    <style>
+        :root {
+            --green: #00ff9d;
+            --blue: #00d9ff;
+            --red: #ff4d6d;
+            --bg: #05070b;
+            --panel: #0a0f16;
+            --border: #123c32;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background:
+                radial-gradient(circle at 50% 20%, rgba(0,255,157,.08), transparent 35%),
+                #05070b;
+            color: white;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+        }
+
+        header {
+            padding: 18px 5%;
+            background: rgba(10,15,22,.92);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            color: var(--green);
+            font-size: 21px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .logo-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            margin-right: 7px;
+            box-shadow: 0 0 12px var(--green);
+        }
+
+        .status {
+            font-size: 13px;
+            color: #8b9aaa;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            margin-right: 6px;
+            box-shadow: 0 0 10px var(--green);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1150px;
+            margin: auto;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 55px 20px 15px;
+        }
+
+        .eyebrow {
+            color: var(--green);
+            font-size: 12px;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(38px, 7vw, 65px);
+            background: linear-gradient(90deg, var(--green), var(--blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: #8492a6;
+            margin-top: 14px;
+            font-size: 14px;
+        }
+
+        .start-btn {
+            margin-top: 22px;
+            padding: 12px 25px;
+            border: 1px solid var(--green);
+            border-radius: 25px;
+            background: transparent;
+            color: var(--green);
+            cursor: pointer;
+            font-weight: bold;
+            transition: .25s;
+        }
+
+        .start-btn:hover {
+            background: var(--green);
+            color: #00150d;
+            box-shadow: 0 0 25px rgba(0,255,157,.4);
+        }
+
+        /* =========================
+           AI CORE
+        ========================= */
+
+        .ai-core-area {
+            height: 380px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .ai-core {
+            --core-scale: 1;
+            --core-glow: 25px;
+            --ring-speed: 7s;
+
+            width: 220px;
+            height: 220px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            transform: scale(var(--core-scale));
+            transition: transform .4s ease;
+        }
+
+        .core-center {
+            width: 78px;
+            height: 78px;
+            border-radius: 50%;
+
+            background:
+                radial-gradient(circle at 35% 30%, white 0%, #00ff9d 18%, #00a86b 55%, #00452d 100%);
+
+            box-shadow:
+                0 0 var(--core-glow) var(--green),
+                0 0 calc(var(--core-glow) * 2) rgba(0,255,157,.35);
+
+            animation: corePulse 2s infinite ease-in-out;
+            z-index: 3;
+        }
+
+        .core-text {
+            position: absolute;
+            z-index: 5;
+            color: #00150d;
+            font-size: 10px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
+
+        .core-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid var(--green);
+            box-shadow: 0 0 12px rgba(0,255,157,.15);
+        }
+
+        .ring-one {
+            width: 100%;
+            height: 100%;
+            animation: rotate var(--ring-speed) linear infinite;
+        }
+
+        .ring-two {
+            width: 76%;
+            height: 76%;
+            border-color: var(--blue);
+            border-style: dashed;
+            animation: rotateReverse 4s linear infinite;
+        }
+
+        .ring-three {
+            width: 51%;
+            height: 51%;
+            border-color: var(--green);
+            border-style: dotted;
+            animation: rotate 2.5s linear infinite;
+        }
+
+        /* Particles */
+
+        .core-particles {
+            position: absolute;
+            inset: -40px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: var(--size);
+            height: var(--size);
+            background: var(--particle-color);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--particle-color);
+
+            animation:
+                particleOrbit var(--duration) linear infinite,
+                particlePulse 1.2s ease-in-out infinite alternate;
+
+            animation-delay: var(--delay);
+        }
+
+        .ai-core.processing {
+            --ring-speed: 1.7s;
+        }
+
+        .ai-core.processing .core-center {
+            animation: processingPulse .45s infinite alternate;
+            box-shadow:
+                0 0 55px var(--green),
+                0 0 100px rgba(0,255,157,.45);
+        }
+
+        .ai-core.processing .ring-two {
+            animation-duration: 1s;
+        }
+
+        .ai-core.processing .ring-three {
+            animation-duration: .6s;
+        }
+
+        /* =========================
+           CARDS
+        ========================= */
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .card {
+            background: rgba(10,15,22,.9);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            padding: 20px;
+            box-shadow: inset 0 0 30px rgba(0,255,157,.015);
+        }
+
+        .card-title {
+            color: #718096;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .value {
+            color: var(--green);
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .value.blue {
+            color: var(--blue);
+        }
+
+        .value.red {
+            color: var(--red);
+        }
+
+        /* =========================
+           ACTIVITY
+        ========================= */
+
+        .activity {
+            margin-top: 20px;
+        }
+
+        .activity-list {
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 11px 0;
+            border-bottom: 1px solid #18221f;
+            font-size: 13px;
+        }
+
+        .activity-time {
+            color: var(--green);
+            font-family: Consolas, monospace;
+            white-space: nowrap;
+        }
+
+        /* =========================
+           TERMINAL
+        ========================= */
+
+        .terminal {
+            margin-top: 20px;
+            background: #020304;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            padding: 18px;
+            min-height: 180px;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            color: var(--green);
+            overflow: hidden;
+        }
+
+        .terminal-title {
+            color: #718096;
+            margin-bottom: 15px;
+        }
+
+        .terminal-line {
+            margin-bottom: 8px;
+        }
+
+        /* =========================
+           CHAT
+        ========================= */
+
+        .chat-card {
+            margin-top: 20px;
+            margin-bottom: 50px;
+        }
+
+        .chat-messages {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            line-height: 1.5;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: #0d2630;
+            border: 1px solid #164452;
+        }
+
+        .ai-message {
+            background: #09251d;
+            border: 1px solid #124d3a;
+        }
+
+        .chat-box {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .chat-box input {
+            flex: 1;
+            padding: 14px;
+            background: #05080c;
+            color: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            outline: none;
+        }
+
+        .chat-box input:focus {
+            border-color: var(--green);
+            box-shadow: 0 0 12px rgba(0,255,157,.08);
+        }
+
+        .chat-box button {
+            padding: 14px 24px;
+            background: var(--green);
+            color: #00150d;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .chat-box button:hover {
+            box-shadow: 0 0 20px var(--green);
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #4d5968;
+            font-size: 12px;
+        }
+
+        /* =========================
+           ANIMATIONS
+        ========================= */
+
+        @keyframes corePulse {
+            0%, 100% {
+                transform: scale(.92);
+            }
+
+            50% {
+                transform: scale(1.08);
+            }
+        }
+
+        @keyframes processingPulse {
+            from {
+                transform: scale(1);
+            }
+
+            to {
+                transform: scale(1.3);
+            }
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes rotateReverse {
+            from {
+                transform: rotate(360deg);
+            }
+
+            to {
+                transform: rotate(0deg);
+            }
+        }
+
+        @keyframes particleOrbit {
+            from {
+                transform:
+                    rotate(var(--angle))
+                    translateX(var(--distance))
+                    rotate(calc(var(--angle) * -1));
+            }
+
+            to {
+                transform:
+                    rotate(calc(var(--angle) + 360deg))
+                    translateX(var(--distance))
+                    rotate(calc((var(--angle) + 360deg) * -1));
+            }
+        }
+
+        @keyframes particlePulse {
+            from {
+                opacity: .25;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 800px) {
+
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .ai-core-area {
+                height: 320px;
+            }
+        }
+
+        @media (max-width: 520px) {
+
+            header {
+                padding: 15px;
+            }
+
+            .logo {
+                font-size: 17px;
+            }
+
+            .status {
+                font-size: 11px;
+            }
+
+            .container {
+                width: 94%;
+            }
+
+            .hero {
+                padding-top: 40px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ai-core {
+                width: 185px;
+                height: 185px;
+            }
+
+            .core-center {
+                width: 65px;
+                height: 65px;
+            }
+
+            .chat-box {
+                flex-direction: column;
+            }
+
+            .chat-box button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">
+        <span class="logo-dot"></span>
+        ABRARAI
+    </div>
+
+    <div class="status">
+        <span class="status-dot"></span>
+        SYSTEM ONLINE
+    </div>
+</header>
+
+<main class="container">
+
+    <!-- HERO -->
+
+    <section class="hero">
+
+        <div class="eyebrow">
+            PERSONAL AI COMMAND CENTER
+        </div>
+
+        <h1>ABRARAI</h1>
+
+        <p>
+            Local AI • System Monitor • Real-Time Intelligence
+        </p>
+
+        <button class="start-btn" onclick="startSystem()">
+            INITIALIZE SYSTEM
+        </button>
+
+    </section>
+
+
+    <!-- AI CORE -->
+
+    <section class="ai-core-area">
+
+        <div class="ai-core" id="aiCore">
+
+            <div class="core-particles" id="coreParticles"></div>
+
+            <div class="core-ring ring-one"></div>
+            <div class="core-ring ring-two"></div>
+            <div class="core-ring ring-three"></div>
+
+            <div class="core-center"></div>
+
+            <div class="core-text">
+                AI CORE
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- SYSTEM STATS -->
+
+    <section class="grid">
+
+        <div class="card">
+            <div class="card-title">CPU Usage</div>
+            <div class="value" id="cpu">--%</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">RAM Usage</div>
+            <div class="value" id="ram">--%</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Disk Usage</div>
+            <div class="value" id="disk">--%</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">AI Engine</div>
+            <div class="value" id="aiEngine">CHECKING</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Server</div>
+            <div class="value" id="serverStatus">CHECKING</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Model</div>
+            <div class="value blue" id="model">--</div>
+        </div>
+
+    </section>
+
+
+    <!-- ACTIVITY -->
+
+    <section class="card activity">
+
+        <div class="card-title">
+            AI ACTIVITY MONITOR
+        </div>
+
+        <div class="activity-list" id="activityList">
+
+            <div class="activity-item">
+                <span>Waiting for activity...</span>
+                <span class="activity-time">--:--:--</span>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- TERMINAL -->
+
+    <section class="terminal">
+
+        <div class="terminal-title">
+            TERMINAL / SYSTEM LOG
+        </div>
+
+        <div id="terminalLog">
+
+            <div class="terminal-line">
+                &gt; AbrarAI interface loaded
+            </div>
+
+            <div class="terminal-line">
+                &gt; Waiting for system initialization...
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- EXTRA STATS -->
+
+    <section class="grid" style="margin-top:16px;">
+
+        <div class="card">
+            <div class="card-title">AI Requests</div>
+            <div class="value" id="requests">0</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Response Time</div>
+            <div class="value" id="responseTime">0.00s</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Last Update</div>
+            <div class="value blue" id="lastUpdate">--:--:--</div>
+        </div>
+
+    </section>
+
+
+    <!-- CHAT -->
+
+    <section class="card chat-card">
+
+        <div class="card-title">
+            TALK TO ABRARAI
+        </div>
+
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <div class="chat-box">
+
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Ask AbrarAI anything..."
+                autocomplete="off"
+            >
+
+            <button onclick="sendMessage()">
+                SEND
+            </button>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer>
+    ABRARAI • LOCAL AI COMMAND CENTER
+    <br>
+    <span id="clock">--:--:--</span>
+</footer>
+
+
+<script>
+
+    const aiCore = document.getElementById("aiCore");
+    const terminalLog = document.getElementById("terminalLog");
+    const activityList = document.getElementById("activityList");
+    const chatMessages = document.getElementById("chatMessages");
+    const messageInput = document.getElementById("messageInput");
+
+    let systemStarted = false;
+
+
+    /* =========================
+       CORE PARTICLES
+    ========================= */
+
+    function createParticles() {
+
+        const container = document.getElementById("coreParticles");
+
+        if (!container) return;
+
+        container.innerHTML = "";
+
+        for (let i = 0; i < 28; i++) {
+
+            const particle = document.createElement("span");
+
+            particle.className = "particle";
+
+            const angle = Math.floor(Math.random() * 360);
+            const distance = 105 + Math.floor(Math.random() * 55);
+            const size = 2 + Math.random() * 3;
+            const duration = 4 + Math.random() * 6;
+            const delay = Math.random() * -6;
+
+            particle.style.setProperty(
+                "--angle",
+                angle + "deg"
+            );
+
+            particle.style.setProperty(
+                "--distance",
+                distance + "px"
+            );
+
+            particle.style.setProperty(
+                "--size",
+                size + "px"
+            );
+
+            particle.style.setProperty(
+                "--duration",
+                duration + "s"
+            );
+
+            particle.style.setProperty(
+                "--delay",
+                delay + "s"
+            );
+
+            particle.style.setProperty(
+                "--particle-color",
+                i % 3 === 0 ? "#00d9ff" : "#00ff9d"
+            );
+
+            container.appendChild(particle);
+        }
+    }
+
+
+    /* =========================
+       LIVE CORE VISUALIZATION
+    ========================= */
+
+    function updateCoreVisualization(cpu, ram) {
+
+        if (!aiCore) return;
+
+        cpu = Number(cpu) || 0;
+        ram = Number(ram) || 0;
+
+        const systemLoad =
+            Math.min(
+                100,
+                (cpu * 0.65) + (ram * 0.35)
+            );
+
+        const scale =
+            1 + (systemLoad / 100) * 0.25;
+
+        const glow =
+            20 + (systemLoad * 0.8);
+
+        const speed =
+            Math.max(
+                1.5,
+                8 - (systemLoad / 100) * 6
+            );
+
+        aiCore.style.setProperty(
+            "--core-scale",
+            scale.toFixed(2)
+        );
+
+        aiCore.style.setProperty(
+            "--core-glow",
+            glow.toFixed(0) + "px"
+        );
+
+        aiCore.style.setProperty(
+            "--ring-speed",
+            speed.toFixed(2) + "s"
+        );
+    }
+
+
+    /* =========================
+       TERMINAL
+    ========================= */
+
+    function terminalLogAdd(message) {
+
+        if (!terminalLog) return;
+
+        const line = document.createElement("div");
+
+        line.className = "terminal-line";
+
+        line.textContent = "> " + message;
+
+        terminalLog.appendChild(line);
+
+        while (terminalLog.children.length > 12) {
+            terminalLog.removeChild(
+                terminalLog.firstChild
+            );
+        }
+
+        terminalLog.scrollTop =
+            terminalLog.scrollHeight;
+    }
+
+
+    /* =========================
+       ACTIVITY
+    ========================= */
+
+    function addActivity(message) {
+
+        if (!activityList) return;
+
+        const item = document.createElement("div");
+
+        item.className = "activity-item";
+
+        const time =
+            new Date().toLocaleTimeString();
+
+        item.innerHTML = `
+            <span>${escapeHTML(message)}</span>
+            <span class="activity-time">${time}</span>
+        `;
+
+        activityList.prepend(item);
+
+        while (activityList.children.length > 10) {
+            activityList.removeChild(
+                activityList.lastChild
+            );
+        }
+    }
+
+
+    /* =========================
+       INITIALIZE
+    ========================= */
+
+    function startSystem() {
+
+        systemStarted = true;
+
+        terminalLogAdd(
+            "System initialization started"
+        );
+
+        terminalLogAdd(
+            "Connecting to local AI engine..."
+        );
+
+        addActivity(
+            "System initialized"
+        );
+
+        updateSystemStats();
+
+        setTimeout(() => {
+
+            terminalLogAdd(
+                "AbrarAI monitoring active"
+            );
+
+            addActivity(
+                "Live monitoring active"
+            );
+
+        }, 700);
+    }
+
+
+    /* =========================
+       SYSTEM MONITOR
+    ========================= */
+
+    async function updateSystemStats() {
+
+        try {
+
+            const response =
+                await fetch("/api/system");
+
+            if (!response.ok) {
+                throw new Error("System API error");
+            }
+
+            const data =
+                await response.json();
+
+
+            /* CPU */
+
+            document.getElementById("cpu")
+                .textContent =
+                (data.cpu ?? 0) + "%";
+
+
+            /* RAM */
+
+            document.getElementById("ram")
+                .textContent =
+                (data.ram?.percent ?? 0) + "%";
+
+
+            /* DISK */
+
+            document.getElementById("disk")
+                .textContent =
+                (data.disk?.percent ?? 0) + "%";
+
+
+            /* MODEL */
+
+            document.getElementById("model")
+                .textContent =
+                data.model || "--";
+
+
+            /* AI ENGINE */
+
+            const aiEngine =
+                document.getElementById("aiEngine");
+
+            if (data.ollama) {
+
+                aiEngine.textContent =
+                    "ONLINE";
+
+                aiEngine.className =
+                    "value";
+
+            } else {
+
+                aiEngine.textContent =
+                    "OFFLINE";
+
+                aiEngine.className =
+                    "value red";
+            }
+
+
+            /* SERVER */
+
+            const serverStatus =
+                document.getElementById(
+                    "serverStatus"
+                );
+
+            if (data.server) {
+
+                serverStatus.textContent =
+                    "ONLINE";
+
+                serverStatus.className =
+                    "value";
+
+            } else {
+
+                serverStatus.textContent =
+                    "OFFLINE";
+
+                serverStatus.className =
+                    "value red";
+            }
+
+
+            /* REQUESTS */
+
+            document.getElementById("requests")
+                .textContent =
+                data.requests ?? 0;
+
+
+            /* RESPONSE TIME */
+
+            document.getElementById("responseTime")
+                .textContent =
+                (data.response_time ?? 0)
+                + "s";
+
+
+            /* UPDATE TIME */
+
+            document.getElementById("lastUpdate")
+                .textContent =
+                data.time || "--:--:--";
+
+
+            /* CORE */
+
+            updateCoreVisualization(
+                data.cpu,
+                data.ram?.percent
+            );
+
+
+            /* ACTIVITY */
+
+            if (
+                Array.isArray(data.activity)
+            ) {
+
+                activityList.innerHTML = "";
+
+                if (data.activity.length === 0) {
+
+                    activityList.innerHTML = `
+                        <div class="activity-item">
+                            <span>No activity yet.</span>
+                            <span class="activity-time">--:--:--</span>
+                        </div>
+                    `;
+
+                } else {
+
+                    data.activity.forEach(item => {
+
+                        const row =
+                            document.createElement(
+                                "div"
+                            );
+
+                        row.className =
+                            "activity-item";
+
+                        row.innerHTML = `
+                            <span>
+                                ${escapeHTML(
+                                    item.message || ""
+                                )}
+                            </span>
+
+                            <span class="activity-time">
+                                ${escapeHTML(
+                                    item.time || ""
+                                )}
+                            </span>
+                        `;
+
+                        activityList.appendChild(row);
+                    });
+                }
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            document.getElementById("aiEngine")
+                .textContent =
+                "OFFLINE";
+
+            document.getElementById("aiEngine")
+                .className =
+                "value red";
+
+            terminalLogAdd(
+                "System monitor connection failed"
+            );
+        }
+    }
+
+
+    /* =========================
+       SEND MESSAGE
+    ========================= */
+
+    async function sendMessage() {
+
+        const message =
+            messageInput.value.trim();
+
+        if (!message) return;
+
+
+        addChatMessage(
+            message,
+            "user"
+        );
+
+        messageInput.value = "";
+
+        aiCore.classList.add(
+            "processing"
+        );
+
+        addActivity(
+            "AI request sent"
+        );
+
+        terminalLogAdd(
+            "AI processing request..."
+        );
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/chat",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            message: message
+                        })
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (data.reply) {
+
+                addChatMessage(
+                    data.reply,
+                    "ai"
+                );
+
+                addActivity(
+                    "AI response generated"
+                );
+
+                terminalLogAdd(
+                    "AI response generated"
+                );
+
+            } else {
+
+                addChatMessage(
+                    "Sorry Sir, no response received.",
+                    "ai"
+                );
+
+            }
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            addChatMessage(
+                "❌ Could not connect to AbrarAI server.",
+                "ai"
+            );
+
+            addActivity(
+                "ERROR: AI connection failed"
+            );
+
+            terminalLogAdd(
+                "ERROR: AI connection failed"
+            );
+
+        } finally {
+
+            aiCore.classList.remove(
+                "processing"
+            );
+
+            updateSystemStats();
+        }
+    }
+
+
+    /* =========================
+       CHAT MESSAGE
+    ========================= */
+
+    function addChatMessage(
+        text,
+        type
+    ) {
+
+        const message =
+            document.createElement("div");
+
+        message.className =
+            "message " +
+            (
+                type === "user"
+                    ? "user-message"
+                    : "ai-message"
+            );
+
+        message.textContent = text;
+
+        chatMessages.appendChild(
+            message
+        );
+
+        chatMessages.scrollTop =
+            chatMessages.scrollHeight;
+    }
+
+
+    /* =========================
+       ENTER KEY
+    ========================= */
+
+    function handleEnter(event) {
+
+        if (event.key === "Enter") {
+
+            event.preventDefault();
+
+            sendMessage();
+        }
+    }
+
+    messageInput.addEventListener(
+        "keydown",
+        handleEnter
+    );
+
+
+    /* =========================
+       HTML SECURITY
+    ========================= */
+
+    function escapeHTML(text) {
+
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+
+    /* =========================
+       LIVE CLOCK
+    ========================= */
+
+    function updateClock() {
+
+        const now =
+            new Date();
+
+        document.getElementById("clock")
+            .textContent =
+            now.toLocaleTimeString();
+    }
+
+
+    /* =========================
+       START
+    ========================= */
+
+    createParticles();
+
+    updateClock();
+
+    setInterval(
+        updateClock,
+        1000
+    );
+
+    updateSystemStats();
+
+    setInterval(
+        updateSystemStats,
+        3000
+    );
+
+</script>
+
+</body>
+</html>
