@@ -1,32 +1,39 @@
 from flask import Flask, request, jsonify, send_file
-import requests
-import psutil
 import os
 import time
+import psutil
 from datetime import datetime
+from groq import Groq
 
 app = Flask(__name__)
 
-OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
-OLLAMA_TAGS_URL = "http://127.0.0.1:11434/api/tags"
+# ==============================
+# GROQ AI SETTINGS
+# ==============================
 
-MODEL = "tinyllama:latest"
+API_KEY = os.getenv("GROQ_API_KEY")
+MODEL = "openai/gpt-oss-20b"
 
-# =========================
-# AI ACTIVITY
-# =========================
+client = None
+
+if API_KEY:
+    client = Groq(api_key=API_KEY)
+
+
+# ==============================
+# STATISTICS
+# ==============================
 
 ai_requests = 0
 last_response_time = 0
 activity_log = []
 
-server_start_time = time.time()
 
+# ==============================
+# ACTIVITY LOG
+# ==============================
 
 def add_activity(message):
-
-    global activity_log
-
     current_time = datetime.now().strftime("%H:%M:%S")
 
     activity_log.insert(
@@ -37,195 +44,102 @@ def add_activity(message):
         }
     )
 
-    activity_log = activity_log[:15]
+    del activity_log[10:]
 
 
-# =========================
-# HOME
-# =========================
+# ==============================
+# HOME PAGE
+# ==============================
 
 @app.route("/")
 def home():
     return send_file("index.html")
 
 
-# =========================
-# SYSTEM MONITOR
-# =========================
+# ==============================
+# SYSTEM STATUS
+# ==============================
 
 @app.route("/api/system")
 def system_stats():
 
     try:
-
-        # CPU
         cpu = psutil.cpu_percent(interval=0.1)
 
-        # RAM
         memory = psutil.virtual_memory()
 
-        ram_percent = memory.percent
-        ram_used = memory.used / (1024 ** 3)
-        ram_total = memory.total / (1024 ** 3)
+        disk = psutil.disk_usage(os.path.abspath(os.sep))
 
-        # STORAGE
-        disk = psutil.disk_usage(
-            os.path.abspath(os.sep)
-        )
+        ai_online = client is not None
 
-        disk_percent = disk.percent
-        disk_used = disk.used / (1024 ** 3)
-        disk_total = disk.total / (1024 ** 3)
+        return jsonify(
+            {
+                "cpu": round(cpu, 1),
 
-        # OLLAMA
-        ollama_online = False
+                "ram": {
+                    "percent": round(memory.percent, 1),
+                    "used": round(memory.used / (1024 ** 3), 1),
+                    "total": round(memory.total / (1024 ** 3), 1)
+                },
 
-        try:
+                "disk": {
+                    "percent": round(disk.percent, 1),
+                    "used": round(disk.used / (1024 ** 3), 1),
+                    "total": round(disk.total / (1024 ** 3), 1)
+                },
 
-            ollama_response = requests.get(
-                OLLAMA_TAGS_URL,
-                timeout=3
-            )
+                "ollama": ai_online,
 
-            if ollama_response.status_code == 200:
-                ollama_online = True
+                "model": MODEL,
 
-        except requests.exceptions.RequestException:
+                "server": True,
 
-            ollama_online = False
+                "time": datetime.now().strftime("%H:%M:%S"),
 
-        # UPTIME
-        uptime_seconds = int(
-            time.time() - server_start_time
-        )
+                "ai_engine": "ONLINE" if ai_online else "OFFLINE",
 
-        hours = uptime_seconds // 3600
-        minutes = (uptime_seconds % 3600) // 60
-        seconds = uptime_seconds % 60
-
-        uptime = (
-            f"{hours:02d}:"
-            f"{minutes:02d}:"
-            f"{seconds:02d}"
-        )
-
-        # TIME
-        current_time = datetime.now().strftime(
-            "%H:%M:%S"
-        )
-
-        return jsonify({
-
-            "cpu": round(cpu, 1),
-
-            "ram": {
-                "percent": round(
-                    ram_percent,
-                    1
+                "connection": (
+                    "CONNECTED"
+                    if ai_online
+                    else "API KEY MISSING"
                 ),
-                "used": round(
-                    ram_used,
-                    1
-                ),
-                "total": round(
-                    ram_total,
-                    1
-                )
-            },
 
-            "disk": {
-                "percent": round(
-                    disk_percent,
-                    1
-                ),
-                "used": round(
-                    disk_used,
-                    1
-                ),
-                "total": round(
-                    disk_total,
-                    1
-                )
-            },
+                "requests": ai_requests,
 
-            "ollama": ollama_online,
-
-            "model": MODEL,
-
-            "server": True,
-
-            "time": current_time,
-
-            "uptime": uptime,
-
-            "ai_engine":
-                "ONLINE"
-                if ollama_online
-                else "OFFLINE",
-
-            "connection":
-                "CONNECTED",
-
-            "requests":
-                ai_requests,
-
-            "response_time":
-                round(
+                "response_time": round(
                     last_response_time,
                     2
                 ),
 
-            "activity":
-                activity_log
-
-        })
-
-    except Exception as e:
-
-        print(
-            "SYSTEM MONITOR ERROR:",
-            e
+                "activity": activity_log
+            }
         )
 
-        return jsonify({
+    except Exception as error:
 
-            "server": True,
+        print("SYSTEM ERROR:", error)
 
-            "ollama": False,
-
-            "ai_engine": "OFFLINE",
-
-            "connection": "ERROR",
-
-            "requests":
-                ai_requests,
-
-            "response_time":
-                round(
+        return jsonify(
+            {
+                "server": True,
+                "ollama": False,
+                "ai_engine": "OFFLINE",
+                "connection": "ERROR",
+                "requests": ai_requests,
+                "response_time": round(
                     last_response_time,
                     2
                 ),
-
-            "uptime":
-                "ERROR",
-
-            "activity":
-                activity_log,
-
-            "error":
-                "Could not read system information."
-
-        }), 500
+                "activity": activity_log
+            }
+        ), 500
 
 
-# =========================
+# ==============================
 # AI CHAT
-# =========================
+# ==============================
 
-@app.route(
-    "/api/chat",
-    methods=["POST"]
-)
+@app.route("/api/chat", methods=["POST"])
 def chat():
 
     global ai_requests
@@ -235,30 +149,27 @@ def chat():
 
     try:
 
-        data = request.get_json()
+        data = request.get_json(silent=True)
 
         if not data:
 
-            return jsonify({
-                "reply":
-                "Please send a message."
-            })
+            return jsonify(
+                {
+                    "reply": "Please send a message."
+                }
+            ), 400
 
-        message = data.get(
-            "message",
-            ""
+        message = str(
+            data.get("message", "")
         ).strip()
 
         if not message:
 
-            return jsonify({
-                "reply":
-                "Please type a message."
-            })
-
-        # =========================
-        # REQUEST COUNT
-        # =========================
+            return jsonify(
+                {
+                    "reply": "Please type a message."
+                }
+            ), 400
 
         ai_requests += 1
 
@@ -266,9 +177,25 @@ def chat():
             "AI request received"
         )
 
-        # =========================
-        # GREETINGS
-        # =========================
+        # ==============================
+        # CHECK API KEY
+        # ==============================
+
+        if client is None:
+
+            add_activity(
+                "ERROR: Groq API key missing"
+            )
+
+            return jsonify(
+                {
+                    "reply": "AI is not configured. Please check GROQ_API_KEY."
+                }
+            ), 500
+
+        # ==============================
+        # SIMPLE GREETINGS
+        # ==============================
 
         greetings = {
             "hello",
@@ -290,335 +217,144 @@ def chat():
                 "Greeting response generated"
             )
 
-            return jsonify({
+            return jsonify(
+                {
+                    "reply": "Hello Sir! 👋 How can I help you?",
 
-                "reply":
-                "Hello Sir! 👋 How can I help you?",
+                    "response_time": round(
+                        last_response_time,
+                        2
+                    )
+                }
+            )
 
-                "response_time":
-                round(
-                    last_response_time,
-                    2
-                )
-
-            })
-
-        # =========================
-        # AI PROCESSING
-        # =========================
+        # ==============================
+        # GROQ PROCESSING
+        # ==============================
 
         add_activity(
-            "AI processing request..."
+            "Groq AI processing request"
         )
 
-        prompt = f"""Answer this question directly.
+        response = client.chat.completions.create(
 
-Question:
-{message}
+            model=MODEL,
 
-Give only the answer.
-Do not create another question.
-Do not write "User question".
-Do not write "Answer".
-Do not create a conversation.
-Do not pretend the user asked something else.
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are AbrarAI, a helpful AI assistant. "
+                        "Answer the user's actual question directly. "
+                        "Be accurate and concise. "
+                        "Use simple English or Hinglish when appropriate. "
+                        "Do not invent personal information."
+                    )
+                },
 
-Response:"""
-
-        response = requests.post(
-
-            OLLAMA_URL,
-
-            json={
-
-                "model": MODEL,
-
-                "prompt": prompt,
-
-                "stream": False,
-
-                "options": {
-
-                    "temperature": 0.1,
-
-                    "num_predict": 120
-
+                {
+                    "role": "user",
+                    "content": message
                 }
+            ],
 
-            },
+            temperature=0.4,
 
-            timeout=120
-
+            max_tokens=500
         )
 
-        response.raise_for_status()
+        # ==============================
+        # GET AI RESPONSE
+        # ==============================
 
-        result = response.json()
+        reply = response.choices[0].message.content
 
-        reply = result.get(
-            "response",
-            ""
-        ).strip()
+        if reply is None:
+            reply = ""
 
-        # =========================
-        # RESPONSE TIME
-        # =========================
+        reply = reply.strip()
 
         last_response_time = (
             time.time() - start_time
         )
 
-        # =========================
-        # CLEAN RESPONSE
-        # =========================
-
-        unwanted = [
-
-            "AbrarAI:",
-
-            "ABRARAI:",
-
-            "Answer:",
-
-            "answer:",
-
-            "Response:",
-
-            "response:"
-
-        ]
-
-        for text in unwanted:
-
-            if reply.startswith(text):
-
-                reply = reply[
-                    len(text):
-                ].strip()
-
-        # =========================
-        # REMOVE FAKE QUESTIONS
-        # =========================
-
-        fake_question_markers = [
-
-            "User question:",
-
-            "User:",
-
-            "Question:"
-
-        ]
-
-        for marker in fake_question_markers:
-
-            if marker in reply:
-
-                reply = reply.split(
-                    marker
-                )[0].strip()
-
         if not reply:
 
             reply = (
-                "Sorry Sir, "
-                "I couldn't generate "
-                "a response."
+                "Sorry Sir, I could not generate a response."
             )
 
         add_activity(
             "AI response generated"
         )
 
-        return jsonify({
+        return jsonify(
+            {
+                "reply": reply,
 
-            "reply": reply,
-
-            "response_time":
-                round(
+                "response_time": round(
                     last_response_time,
                     2
                 )
-
-        })
-
-    # =========================
-    # OLLAMA OFFLINE
-    # =========================
-
-    except requests.exceptions.ConnectionError:
-
-        last_response_time = (
-            time.time() - start_time
+            }
         )
 
-        add_activity(
-            "ERROR: Ollama offline"
-        )
-
-        return jsonify({
-
-            "reply":
-            "❌ Ollama is not running. "
-            "Please start Ollama.",
-
-            "response_time":
-            round(
-                last_response_time,
-                2
-            )
-
-        }), 500
-
-    # =========================
-    # TIMEOUT
-    # =========================
-
-    except requests.exceptions.Timeout:
-
-        last_response_time = (
-            time.time() - start_time
-        )
-
-        add_activity(
-            "ERROR: AI response timeout"
-        )
-
-        return jsonify({
-
-            "reply":
-            "❌ AI took too long "
-            "to respond. Please try again.",
-
-            "response_time":
-            round(
-                last_response_time,
-                2
-            )
-
-        }), 500
-
-    # =========================
-    # REQUEST ERROR
-    # =========================
-
-    except requests.exceptions.RequestException as e:
+    except Exception as error:
 
         last_response_time = (
             time.time() - start_time
         )
 
         print(
-            "OLLAMA ERROR:",
-            e
+            "AI ERROR:",
+            error
         )
 
         add_activity(
-            "ERROR: AI connection failed"
+            "ERROR: AI request failed"
         )
 
-        return jsonify({
+        return jsonify(
+            {
+                "reply": (
+                    "AI request failed. "
+                    "Please try again."
+                ),
 
-            "reply":
-            "❌ Could not connect "
-            "to the AI.",
-
-            "response_time":
-            round(
-                last_response_time,
-                2
-            )
-
-        }), 500
-
-    # =========================
-    # GENERAL ERROR
-    # =========================
-
-    except Exception as e:
-
-        last_response_time = (
-            time.time() - start_time
-        )
-
-        print(
-            "SERVER ERROR:",
-            e
-        )
-
-        add_activity(
-            "ERROR: Server error"
-        )
-
-        return jsonify({
-
-            "reply":
-            "❌ Something went wrong.",
-
-            "response_time":
-            round(
-                last_response_time,
-                2
-            )
-
-        }), 500
+                "response_time": round(
+                    last_response_time,
+                    2
+                )
+            }
+        ), 500
 
 
-# =========================
+# ==============================
 # START SERVER
-# =========================
+# ==============================
 
 if __name__ == "__main__":
 
-    print()
-
     print(
         "================================"
     )
 
     print(
-        "        🤖 ABRARAI"
+        "          ABRARAI"
     )
 
     print(
         "================================"
     )
 
-    print(
-        "AI Server: ON"
-    )
-
-    print(
-        "System Monitor: ON"
-    )
-
-    print(
-        "AI Activity Monitor: ON"
-    )
-
-    print(
-        "Live Terminal: ON"
-    )
-
-    print(
-        "System Events: ON"
-    )
-
-    print(
-        "Uptime Monitor: ON"
-    )
-
-    print(
-        "Request Counter: ON"
-    )
-
-    print(
-        "Response Time Monitor: ON"
-    )
-
-    print(
-        "Activity Log: ON"
-    )
+    if API_KEY:
+        print(
+            "AI Engine: GROQ ONLINE"
+        )
+    else:
+        print(
+            "AI Engine: API KEY MISSING"
+        )
 
     print(
         "Model:",
@@ -626,11 +362,20 @@ if __name__ == "__main__":
     )
 
     print(
-        "Open: "
-        "http://127.0.0.1:5000"
+        "Server: ON"
     )
 
-    print()
+    print(
+        "System Monitor: ON"
+    )
+
+    print(
+        "Open: http://127.0.0.1:5000"
+    )
+
+    print(
+        "================================"
+    )
 
     app.run(
         host="0.0.0.0",
